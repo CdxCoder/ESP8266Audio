@@ -12,7 +12,7 @@ This fork tracks the upstream [earlephilhower/ESP8266Audio](https://github.com/e
 - PCM RIFF/WAVE decoder accepting `WAV_FORMAT_PCM` and `WAV_FORMAT_EXTENSIBLE`.
 - Bit depth: 8/16/24/32-bit little-endian samples.
 - Channels: mono or stereo (1–2 channels).
-- Works with any `AudioFileSource` (SPIFFS/LittleFS/SD, PROGMEM, HTTP/S streams, buffered RAM/PSRAM, or custom sources).
+- Works with any `AudioFileSource` (SPIFFS/LittleFS/SD, PROGMEM, HTTP/HTTPS streams, buffered RAM/PSRAM, or custom sources).
 - Output to any `AudioOutput` (I2S/NoDAC, SPDIF, SerialWAV, SPIFFSWAV, or Null).
 - Buffer size is tunable through `AudioGeneratorWAV::SetBufferSize()` for balancing latency and memory.
 
