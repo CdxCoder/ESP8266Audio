@@ -1,6 +1,6 @@
 /*
     AudioGeneratorWAV
-    Audio output generator that reads 8 and 16-bit WAV files
+    Audio output generator that reads 8, 16, 24, and 32-bit WAV files
 
     Copyright (C) 2017  Earle F. Philhower, III
 
@@ -65,4 +65,3 @@ protected:
 };
 
 #endif
-

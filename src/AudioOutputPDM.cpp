@@ -36,6 +36,14 @@ AudioOutputPDM::~AudioOutputPDM() {
     stop();
 }
 
+bool AudioOutputPDM::SetPinout(int pin) {
+    if (i2sOn) {
+        return false;
+    }
+    pdmPin = pin;
+    return true;
+}
+
 bool AudioOutputPDM::SetRate(int hz) {
     if (hertz == hz) {
         return true;
