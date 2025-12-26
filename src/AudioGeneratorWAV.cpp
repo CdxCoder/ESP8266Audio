@@ -1,6 +1,6 @@
 /*
     AudioGeneratorWAV
-    Audio output generator that reads 8 and 16-bit WAV files
+    Audio output generator that reads 8, 16, 24, and 32-bit WAV files
 
     Copyright (C) 2017  Earle F. Philhower, III
 
@@ -20,6 +20,10 @@
 
 
 #include "AudioGeneratorWAV.h"
+
+namespace {
+constexpr uint16_t WAV_FORMAT_EXTENSIBLE = 0xfffe;
+}
 
 AudioGeneratorWAV::AudioGeneratorWAV() {
     running = false;
@@ -87,7 +91,7 @@ bool AudioGeneratorWAV::loop() {
     // Try and stuff the buffer one sample at a time
     do {
         if (bitsPerSample == 8) {
-            uint8_t l, r;
+            uint8_t l = 0, r = 0;
             if (!GetBufferedData(1, &l)) {
                 stop();
             }
@@ -95,13 +99,11 @@ bool AudioGeneratorWAV::loop() {
                 if (!GetBufferedData(1, &r)) {
                     stop();
                 }
-            } else {
-                r = 0;
             }
 
             // Upsample from unsigned 8 bits to signed 16 bits
-            lastSample[AudioOutput::LEFTCHANNEL] = (((int16_t)(lastSample[AudioOutput::LEFTCHANNEL] & 0xff)) - 128) << 8;
-            lastSample[AudioOutput::RIGHTCHANNEL] = (((int16_t)(lastSample[AudioOutput::RIGHTCHANNEL] & 0xff)) - 128) << 8;
+            lastSample[AudioOutput::LEFTCHANNEL] = (((int16_t)l) - 128) << 8;
+            lastSample[AudioOutput::RIGHTCHANNEL] = (((int16_t)r) - 128) << 8;
 
         } else if (bitsPerSample == 16) {
             if (!GetBufferedData(2, &lastSample[AudioOutput::LEFTCHANNEL])) {
@@ -114,6 +116,42 @@ bool AudioGeneratorWAV::loop() {
             } else {
                 lastSample[AudioOutput::RIGHTCHANNEL] = 0;
             }
+        } else if (bitsPerSample == 24) {
+            auto read24 = [&](int32_t &dest) {
+                uint8_t raw[3] = {0};
+                if (!GetBufferedData(3, raw)) {
+                    stop();
+                    return false;
+                }
+                dest = (int32_t)(raw[0] | (raw[1] << 8) | (raw[2] << 16));
+                if (dest & 0x00800000) {
+                    dest |= 0xff000000;
+                }
+                return true;
+            };
+
+            int32_t l = 0, r = 0;
+            if (!read24(l)) {
+                break;
+            }
+            if ((channels == 2) && !read24(r)) {
+                break;
+            }
+
+            lastSample[AudioOutput::LEFTCHANNEL] = l >> 8;
+            lastSample[AudioOutput::RIGHTCHANNEL] = r >> 8;
+        } else if (bitsPerSample == 32) {
+            int32_t l = 0, r = 0;
+            if (!GetBufferedData(4, &l)) {
+                stop();
+            }
+            if (channels == 2) {
+                if (!GetBufferedData(4, &r)) {
+                    stop();
+                }
+            }
+            lastSample[AudioOutput::LEFTCHANNEL] = l >> 16;
+            lastSample[AudioOutput::RIGHTCHANNEL] = r >> 16;
         }
     } while (running && output->ConsumeSample(lastSample));
 
@@ -159,7 +197,7 @@ bool AudioGeneratorWAV::ReadWAVInfo() {
         return false;
     }
 
-    // there might be JUNK or PAD - ignore it by continuing reading until we get to "fmt "
+    // there might be JUNK or PAD - skip any chunks until we get to "fmt "
     while (1) {
         if (!ReadU32(&u32)) {
             Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: failed to read WAV data\n"));
@@ -168,6 +206,14 @@ bool AudioGeneratorWAV::ReadWAVInfo() {
         if (u32 == 0x20746d66) {
             break;    // 'fmt '
         }
+        if (!ReadU32(&u32)) {
+            Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: failed to read WAV data\n"));
+            return false;
+        }
+        if (!file->seek(u32, SEEK_CUR)) {
+            Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: failed to skip non-fmt chunk\n"));
+            return false;
+        }
     };
 
     // subchunk size
@@ -175,23 +221,18 @@ bool AudioGeneratorWAV::ReadWAVInfo() {
         Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: failed to read WAV data\n"));
         return false;
     };
-    if (u32 == 16) {
-        toSkip = 0;
-    } else if (u32 == 18) {
-        toSkip = 18 - 16;
-    } else if (u32 == 40) {
-        toSkip = 40 - 16;
-    } else {
+    if (u32 < 16) {
         Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: cannot read WAV, appears not to be standard PCM \n"));
         return false;
     } // we only do standard PCM
+    toSkip = u32 - 16;
 
     // AudioFormat
     if (!ReadU16(&u16)) {
         Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: failed to read WAV data\n"));
         return false;
     };
-    if (u16 != 1) {
+    if ((u16 != 1) && (u16 != WAV_FORMAT_EXTENSIBLE)) {
         Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: cannot read WAV, AudioFormat appears not to be standard PCM \n"));
         return false;
     } // we only do standard PCM
@@ -231,10 +272,10 @@ bool AudioGeneratorWAV::ReadWAVInfo() {
         Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: failed to read WAV data\n"));
         return false;
     };
-    if ((bitsPerSample != 8) && (bitsPerSample != 16)) {
-        Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: cannot read WAV, only 8 or 16 bits is supported \n"));
+    if ((bitsPerSample != 8) && (bitsPerSample != 16) && (bitsPerSample != 24) && (bitsPerSample != 32)) {
+        Serial.printf_P(PSTR("AudioGeneratorWAV::ReadWAVInfo: cannot read WAV, only 8, 16, 24 or 32 bits is supported \n"));
         return false;
-    }  // Only 8 or 16 bits
+    }  // Only 8, 16, 24, or 32 bits
 
     // Skip any extra header
     while (toSkip) {

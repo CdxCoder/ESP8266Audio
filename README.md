@@ -140,7 +140,7 @@ This class, which takes as input any other AudioFileSource and outputs an AudioF
 ## AudioGenerator classes
 AudioGenerator:  Base class for all file decoders.  Takes a AudioFileSource and an AudioOutput object to get the data from and to write decoded samples to.  Call its loop() function as often as you can to ensure the buffers are always kept full and your music won't skip.
 
-AudioGeneratorWAV:  Reads and plays Microsoft WAVE (.WAV) format files of 8 or 16 bits.
+AudioGeneratorWAV:  Reads and plays Microsoft WAVE (.WAV) format files of 8, 16, 24, or 32 bits.
 
 AudioGeneratorMOD:  Reads and plays Amiga ModTracker files (.MOD).  Use a 160MHz clock as this requires tons of SPIFFS reads (which are painfully slow) to get raw instrument sample data for every output sample.  See https://modarchive.org for many free MOD files.
 
@@ -297,4 +297,3 @@ Also, big thanks to @tueddy for getting the initial ESP32 porting into the tree!
 -Earle F. Philhower, III
 
  earlephilhower@yahoo.com
-
