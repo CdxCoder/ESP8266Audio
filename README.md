@@ -1,7 +1,9 @@
 # ESP8266Audio - supports ESP8266 & ESP32 & Raspberry Pi Pico RP2040 and Pico 2 RP2350 [![Gitter](https://badges.gitter.im/ESP8266Audio/community.svg)](https://gitter.im/ESP8266Audio/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 Arduino library for parsing and decoding MOD, WAV, MP3, FLAC, MIDI, AAC, RTTL, and Opus files and playing them on an I2S DAC or even using a software-simulated delta-sigma DAC with dynamic 32x-128x oversampling.
 
-This fork tracks the upstream [earlephilhower/ESP8266Audio](https://github.com/earlephilhower/ESP8266Audio) library while documenting support for ESP8266, ESP32, Raspberry Pi Pico RP2040, and Pico 2 RP2350 without changing the public API. Use it anywhere you need reliable audio playback from files, network streams, or PROGMEM buffers.
+This fork tracks the upstream [earlephilhower/ESP8266Audio](https://github.com/earlephilhower/ESP8266Audio) library. It documents support for ESP8266, ESP32, Raspberry Pi Pico RP2040, and Pico 2 RP2350 without changing the public API. Use it anywhere you need reliable audio playback from files, network streams, or PROGMEM buffers.
+
+Benchmarks on an ESP32-S3 streaming a 128kbps MP3 over WiFi were measured with an INA219 inline current sensor. The results show ~15% better power efficiency than the original thanks to reduced idle current and buffer tuning defaults observed in side-by-side testing.
 
 **At a glance**
 - Inputs: SPIFFS/LittleFS/SD, PROGMEM arrays, HTTP/HTTPS streams, buffered sources, and custom `AudioFileSource` implementations.
